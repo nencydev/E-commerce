@@ -1,14 +1,13 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
+import Counter from '../models/counter.js';
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Register
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    const img = req.file?.filename || ''; // 👈 get uploaded image file name
+    const img = req.file?.filename || '';
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
@@ -21,11 +20,21 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 🔥 Auto-increment user ID using Counter model
+    const counter = await Counter.findOneAndUpdate(
+      { id: 'user_id' },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+
+    const customId = counter.seq;
+
     const newUser = new User({
+      _id: customId, // 👈 Use sequential ID
       name,
       email,
       password: hashedPassword,
-      img, // 👈 assign image filename to `img`
+      img,
     });
 
     await newUser.save();

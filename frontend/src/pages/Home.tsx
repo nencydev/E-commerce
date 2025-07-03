@@ -58,49 +58,72 @@ export default function Home() {
     setPreview(null);
   };
 
-  const handleUpdate = async () => {
-    if (!editingUserId) return;
+const handleUpdate = async () => {
+  if (!editingUserId || !editingUser) return;
 
-    const formData = new FormData();
-    formData.append('name', form.name);
-    formData.append('email', form.email);
-    if (photo) formData.append('photo', photo);
+  const isNameChanged = form.name !== editingUser.name;
+  const isEmailChanged = form.email !== editingUser.email;
+  const isPhotoChanged = photo !== null;
 
-    try {
-      const res = await fetch(
-        `http://localhost:5000/api/auth/users/${editingUserId}`,
-        {
-          method: 'PUT',
-          body: formData,
-          credentials: 'include',
-        }
-      );
+  // ✅ If no changes at all, show Swal and close form
+  if (!isNameChanged && !isEmailChanged && !isPhotoChanged) {
+    Swal.fire({
+      icon: 'info',
+      title: 'No changes made',
+      text: 'Nothing was updated.',
+      timer: 2000,
+      showConfirmButton: false,
+    });
 
-      const data = await res.json();
+    setEditingUserId(null);
+    setForm({ name: '', email: '' });
+    setPhoto(null);
+    setPreview(null);
+    return;
+  }
 
-      if (!res.ok) throw new Error(data.message || 'Update failed');
+  const formData = new FormData();
+  formData.append('name', form.name);
+  formData.append('email', form.email);
+  if (photo) formData.append('photo', photo);
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Updated!',
-        text: 'User details updated successfully',
-        timer: 2000,
-        showConfirmButton: false,
-      });
+  try {
+    const res = await fetch(
+      `http://localhost:5000/api/auth/users/${editingUserId}`,
+      {
+        method: 'PUT',
+        body: formData,
+        credentials: 'include',
+      }
+    );
 
-      setEditingUserId(null);
-      setForm({ name: '', email: '' });
-      setPhoto(null);
-      setPreview(null);
-      fetchUsers();
-    } catch (error: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message || 'Something went wrong',
-      });
-    }
-  };
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.message || 'Update failed');
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Updated!',
+      text: 'User details updated successfully',
+      timer: 2000,
+      showConfirmButton: false,
+    });
+
+    setEditingUserId(null);
+    setForm({ name: '', email: '' });
+    setPhoto(null);
+    setPreview(null);
+    fetchUsers();
+  } catch (error: any) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.message || 'Something went wrong',
+    });
+  }
+};
+
+
 
   useEffect(() => {
     fetchUsers();
@@ -108,10 +131,11 @@ export default function Home() {
 
   return (
     <div className="max-w-4xl mx-auto mt-10">
-      <h2 className="text-2xl font-bold mb-4">Registered Users</h2>
+      <h2 className="text-2xl font-bold mb-4 flex justify-center">Registered Users</h2>
       <table className="w-full border">
         <thead>
           <tr className="bg-gray-100">
+            <th className="p-2 border">ID</th>
             <th className="p-2 border">Photo</th>
             <th className="p-2 border">Name</th>
             <th className="p-2 border">Email</th>
@@ -119,8 +143,9 @@ export default function Home() {
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => (
+          {users.map((user, index) => (
             <tr key={user._id} className="text-center">
+              <td className="p-2 border">{index + 1}</td> {/* ✅ Serial ID */}
               <td className="p-2 border">
                 <img
                   src={
@@ -181,19 +206,47 @@ export default function Home() {
             className="block w-full mb-2 p-2 border rounded"
           />
 
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                const previewURL = URL.createObjectURL(file);
-                setPhoto(file);
-                setPreview(previewURL);
-              }
-            }}
-            className="block w-full mb-2 p-2 border rounded"
-          />
+          <div className="mb-2">
+            <label htmlFor="photo" className="block text-sm font-medium text-gray-700 mb-1">
+              Upload Photo
+            </label>
+
+            <div className="flex items-center gap-2 border ">
+              {/* Fake label styled like input */}
+              <label
+                htmlFor="photo"
+                className="px-4 m-2 border rounded cursor-pointer bg-gray-100 hover:bg-gray-200 text-sm"
+              >
+                Choose File
+              </label>
+
+              {/* Filename */}
+              <span className="text-sm text-gray-700">
+                {photo
+                  ? photo.name
+                  : editingUser?.img
+                    ? editingUser.img
+                    : 'No file chosen'}
+              </span>
+            </div>
+
+            {/* Hidden actual file input */}
+            <input
+              id="photo"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const previewURL = URL.createObjectURL(file);
+                  setPhoto(file);
+                  setPreview(previewURL);
+                }
+              }}
+              className="hidden"
+            />
+          </div>
+
 
           {/* Show preview or existing image */}
           {(preview || editingUser?.img) && (

@@ -5,10 +5,15 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import authRoutes from './routes/auth.js';
 import cookieParser from 'cookie-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import chalk from 'chalk'; // ✅ Import chalk
 
 const app = express();
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Middleware
 app.use(cors({
@@ -17,6 +22,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// For ES module __dirname workaround
+
 
 // Routes
 app.use('/api/auth', authRoutes);
